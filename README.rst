@@ -1,55 +1,28 @@
-CAN over network bridge for Python
+Python CAN Interface for SimVA
 ==================================
 
-Creates a CAN over TCP/IP bridge for use with python-can_.
+Creates a Python-CAN interface using dual UDP(send, recv) bridge which provide by SimVA product.
+Here is example, mixed with python-remote-can_
 
+```python
+bus = can.Bus(interface='remote', channel='ws://localhost:54701', bitrate=50000, receive_own_messages=True)
+simva = can.Bus(interface='simva', channel=8)
+print('Initialize')
+while True:
+    ''' Recv from SimVA '''
+    msg = simva.recv()
+    print(f'recv = {msg.arbitration_id}')
 
-Installation
-------------
-
-Install using pip::
-
-    $ pip install python-can-remote
-
-
-Usage
------
-
-Start server from command line::
-
-    $ python -m can_remote --interface=virtual --channel=0 --bitrate=500000
-
-
-Create python-can bus:
-
-.. code-block:: python
-
-    import can
-
-    # Create a connection to server. Any config is passed to server.
-    bus = can.Bus('ws://localhost:54701/',
-                  bustype='remote',
-                  bitrate=500000,
-                  receive_own_messages=True)
-
-    # Send messages
-    msg = can.Message(arbitration_id=0x12345, data=[1,2,3,4,5,6,7,8])
+    ''' send to remote-can for visualization '''
     bus.send(msg)
 
-    # Receive messages
-    msg2 = bus.recv(1)
-    print(msg2)
+    ''' Send to SimVA '''
+    time.sleep(0.1)
+    for base in [0x400, 0x410, 0x420, 0x430, 0x440, 0x450, 0x460, 0x470, 0x480]:
+        for i in range(2):
+            id = base + i
+            data = [255, 255, 255, 255, 255, 255, 255, 255]
 
-    # Disconnect
-    bus.shutdown()
+            simva.send(can.Message(arbitration_id=id, data=data))
 
-
-Web interface
--------------
-
-There is also a basic web interface for inspecting the CAN traffic
-using a browser.
-It is available on the same address using HTTP, e.g. http://localhost:54701/.
-
-
-.. _python-can: https://python-can.readthedocs.org/en/stable/
+```
