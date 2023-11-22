@@ -2,6 +2,7 @@ import can
 from can import Message
 import socket
 import struct
+import time
 
 
 class SimVABus(can.bus.BusABC):
@@ -36,48 +37,53 @@ class SimVA(object):
     SIMVA_RECV_ADDR = (SERVER_IP, RECV_PORT)
 
     def __init__(self, channel: int):
+        print("simva initialized")
         self._send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._send_socket.connect(SimVA.SIMVA_SEND_ADDR)
 
         self._recv_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._recv_socket.bind(SimVA.SIMVA_RECV_ADDR)
-
         self._channel = channel
 
     def fileno(self):
         return self._send_socket.fileno()
 
-    def recv(self, timeout=None):
-        msg, addr = self._recv_socket.recvfrom(1024)
+    def recv(self, timeout=3):
+        current_time = time.time()
+        while True:
+            if timeout is not None:
+                if time.time() - current_time > timeout:
+                    return None
+                
+            # simva always send 70 bytes for each message
+            msg, addr = self._recv_socket.recvfrom(70)
 
-        # data 필드의 길이
-        data_length = len(msg) - struct.calcsize('<IBB')
+            
+            data_length = len(msg) - struct.calcsize('<IBB')
+            packet_format = f'<IBB{data_length}s'
+            
+            unpacked_data = struct.unpack(packet_format, msg)
 
-        # 패킷의 언패킹을 위한 형식 문자열
-        packet_format = f'<IBB{data_length}s'
-        # 언패킹
-        unpacked_data = struct.unpack(packet_format, msg)
-
-        # 언패킹된 데이터를 각각의 변수에 할당
-        arb_id, length, network, data = unpacked_data
-
-        return Message(arbitration_id=arb_id, data=data[:length])
+            arb_id, length, channel, data = unpacked_data
+            if self._channel == channel:
+                return Message(arbitration_id=arb_id, data=data[:length])
+            else:
+                # wait for next message
+                continue
 
     def send(self, msg:can.Message):
         id = msg.arbitration_id
         data = msg.data
-        # data 필드를 bytes 객체로 변환
+
         data_bytes = bytes(data)
         length = len(data_bytes)
-        network = self._channel
+        channel = self._channel
 
-        # 패킷을 패킹하기 위한 형식 문자열
         packet_format = f'<IBB{length}s'
 
-        # 패킹
-        packed_data = struct.pack(packet_format, id, length, network, data_bytes)
+        packed_data = struct.pack(packet_format, id, length, channel, data_bytes)
 
-        self._send_socket.send(packed_data)  # 서버에 메시지 전송
+        self._send_socket.send(packed_data)
 
     def close(self):
         self._send_socket.close()
