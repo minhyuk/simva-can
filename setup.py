@@ -1,6 +1,8 @@
 from setuptools import setup, find_packages
 
-description = open("README.rst").read()
+# Read the description content from README.rst
+with open("README.rst") as f:
+    description = f.read()
 
 setup(
     name="python-simva-can",
