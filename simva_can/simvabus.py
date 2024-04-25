@@ -145,3 +145,4 @@ class SimVA(object):
             exc: The exception that caused termination, for logging or handling purposes.
         """
         self.close()
+
