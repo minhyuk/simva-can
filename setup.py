@@ -2,6 +2,12 @@ from setuptools import setup, find_packages
 
 description = open("README.rst").read()
 
+"""
+This setup script configures the packaging and distribution of the 'python-simva-can' package.
+It defines the package name, version, author details, and its dependencies among other configurations.
+This enables the package to be easily installed and used in other projects with dependency management.
+"""
+
 setup(
     name="python-simva-can",
     url="https://github.com/minhyuk/simva-can.git",
@@ -24,3 +30,4 @@ setup(
     },
     install_requires=["python-can>=3.0.0"]
 )
+
